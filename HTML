@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SplitSmart | Modern Bill Splitter</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        },
+                        emerald: {
+                            450: '#10b981',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col justify-between selection:bg-brand-500 selection:text-white">
+
+    <!-- Top Navigation / Header -->
+    <header class="w-full bg-white border-b border-slate-200/80 sticky top-0 z-30">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+                    <i data-lucide="receipt" class="w-5 h-5"></i>
+                </div>
+                <span class="font-display font-bold text-xl tracking-tight text-slate-900">Split<span class="text-brand-600">Smart</span></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- Currency Selector -->
+                <select id="currency-select" aria-label="Select Currency" class="bg-slate-100 hover:bg-slate-200/70 text-slate-700 font-medium text-sm rounded-xl px-3 py-2 border-none focus:ring-2 focus:ring-brand-500 cursor-pointer transition">
+                    <option value="$">$ USD</option>
+                    <option value="€">€ EUR</option>
+                    <option value="£">£ GBP</option>
+                    <option value="₱">₱ PHP</option>
+                    <option value="¥">¥ JPY</option>
+                </select>
+                <button id="reset-btn" type="button" class="text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-2 rounded-xl text-sm font-medium transition flex items-center gap-1.5" title="Reset all fields">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Reset</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        
+        <!-- Mode Toggle Banner -->
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+            <div>
+                <h1 class="font-display font-bold text-lg text-slate-900">Split Method</h1>
+                <p class="text-xs sm:text-sm text-slate-500">Choose how you want to divide the check among your group.</p>
+            </div>
+            
+            <!-- Segmented Control -->
+            <div class="inline-flex p-1 bg-slate-100 rounded-xl w-full sm:w-auto">
+                <button type="button" id="mode-even-btn" class="flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-white text-brand-600 shadow-sm flex items-center justify-center gap-2">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    Even Split
+                </button>
+                <button type="button" id="mode-custom-btn" class="flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2">
+                    <i data-lucide="list-checks" class="w-4 h-4"></i>
+                    Custom / Itemized
+                </button>
+            </div>
+        </div>
+
+        <!-- Two-Column Grid Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+            
+            <!-- LEFT COLUMN: Inputs & Controls (7 cols on lg) -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Card 1: Bill Amount & People (Even Mode) -->
+                <div class="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm space-y-6">
+                    
+                    <!-- Total Bill Input (Visible in Even Mode, Auto-calculated or Base in Custom Mode) -->
+                    <div id="even-bill-section">
+                        <div class="flex justify-between items-center mb-2">
+                            <label for="bill-input" class="block text-sm font-semibold text-slate-700">Total Bill Amount</label>
+                            <span id="bill-error" class="text-xs font-medium text-rose-500 hidden">Please enter a valid positive amount</span>
+                        </div>
+                        <div class="relative">
+                            <span class="currency-symbol absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-display font-bold text-xl select-none">$</span>
+                            <input 
+                                type="number" 
+                                id="bill-input" 
+                                inputmode="decimal"
+                                min="0" 
+                                step="0.01" 
+                                placeholder="0.00" 
+                                class="w-full pl-10 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-2xl font-display font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Tip Selector -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2.5">
+                            <label class="block text-sm font-semibold text-slate-700">Select Tip</label>
+                            <!-- Toggle Custom Tip Type (% vs Flat $) -->
+                            <div class="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-xs font-medium">
+                                <button type="button" id="tip-type-percent" class="px-2 py-1 rounded-md bg-white text-slate-800 shadow-sm transition">% Percent</button>
+                                <button type="button" id="tip-type-flat" class="px-2 py-1 rounded-md text-slate-500 hover:text-slate-800 transition"><span class="currency-symbol">$</span> Amount</button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Preset Buttons Grid -->
+                        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+                            <button type="button" data-tip="0" class="tip-preset-btn py-2.5 px-3 rounded-xl font-semibold text-sm border border-slate-200 bg-white text-slate-700 hover:border-brand-500 hover:text-brand-600 transition">0%</button>
+                            <button type="button" data-tip="10" class="tip-preset-btn py-2.5 px-3 rounded-xl font-semibold text-sm border border-slate-200 bg-white text-slate-700 hover:border-brand-500 hover:text-brand-600 transition">10%</button>
+                            <button type="button" data-tip="15" class="tip-preset-btn py-2.5 px-3 rounded-xl font-semibold text-sm border border-brand-600 bg-brand-600 text-white shadow-sm shadow-brand-500/20 transition">15%</button>
+                            <button type="button" data-tip="18" class="tip-preset-btn py-2.5 px-3 rounded-xl font-semibold text-sm border border-slate-200 bg-white text-slate-700 hover:border-brand-500 hover:text-brand-600 transition">18%</button>
+                            <button type="button" data-tip="20" class="tip-preset-btn py-2.5 px-3 rounded-xl font-semibold text-sm border border-slate-200 bg-white text-slate-700 hover:border-brand-500 hover:text-brand-600 transition">20%</button>
+                            
+                            <!-- Custom Tip Input -->
+                            <div class="relative col-span-1">
+                                <input 
+                                    type="number" 
+                                    id="custom-tip-input" 
+                                    inputmode="decimal"
+                                    min="0" 
+                                    step="any"
+                                    placeholder="Custom" 
+                                    class="w-full h-full py-2.5 px-2.5 text-center rounded-xl font-semibold text-sm border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition"
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Number of People (Even Split Mode) -->
+                    <div id="even-people-section">
+                        <div class="flex justify-between items-center mb-2">
+                            <label for="people-input" class="block text-sm font-semibold text-slate-700">Number of People</label>
+                            <span class="text-xs text-slate-400">Min 1 person</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button 
+                                type="button" 
+                                id="decrement-people" 
+                                aria-label="Decrease number of people"
+                                class="w-12 h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 flex items-center justify-center transition disabled:opacity-40 disabled:pointer-events-none"
+                            >
+                                <i data-lucide="minus" class="w-5 h-5"></i>
+                            </button>
+                            
+                            <div class="relative flex-grow">
+                                <i data-lucide="user" class="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                                <input 
+                                    type="number" 
+                                    id="people-input" 
+                                    inputmode="numeric"
+                                    min="1" 
+                                    max="100"
+                                    value="2" 
+                                    class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xl font-display font-bold text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition"
+                                >
+                            </div>
+
+                            <button 
+                                type="button" 
+                                id="increment-people" 
+                                aria-label="Increase number of people"
+                                class="w-12 h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 flex items-center justify-center transition"
+                            >
+                                <i data-lucide="plus" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Custom / Itemized Split Section (Hidden by default) -->
+                <div id="custom-split-section" class="hidden bg-white rounded-3xl p-5 sm:p-7 border border-slate-200/80 shadow-sm space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="font-display font-bold text-base text-slate-900">Individual Shares & Items</h2>
+                            <p class="text-xs text-slate-500">Enter each person's subtotal. Tip is distributed proportionally.</p>
+                        </div>
+                        <button 
+                            type="button" 
+                            id="add-person-btn" 
+                            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold text-xs sm:text-sm transition active:scale-95"
+                        >
+                            <i data-lucide="user-plus" class="w-4 h-4"></i>
+                            Add Person
+                        </button>
+                    </div>
+
+                    <!-- Optional Tax / Shared Fee input for Custom Mode -->
+                    <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="percent" class="w-4 h-4 text-slate-400"></i>
+                            <span class="text-xs font-semibold text-slate-700">Shared Tax / Extra Fees (Optional)</span>
+                        </div>
+                        <div class="relative w-full sm:w-36">
+                            <span class="currency-symbol absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">$</span>
+                            <input 
+                                type="number" 
+                                id="shared-tax-input" 
+                                inputmode="decimal"
+                                min="0" 
+                                step="0.01" 
+                                placeholder="0.00" 
+                                class="w-full pl-7 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:border-brand-500"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Dynamic List of People -->
+                    <div id="custom-people-list" class="space-y-3">
+                        <!-- Person rows injected via JS -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: Real-Time Summary Card (5 cols on lg) -->
+            <div class="lg:col-span-5 lg:sticky lg:top-24">
+                <div class="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-900/10 relative overflow-hidden">
+                    
+                    <!-- Decorative subtle gradient orb -->
+                    <div class="absolute -top-24 -right-24 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none"></div>
+                    <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <div class="relative z-10 space-y-6">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Summary Breakdown</span>
+                            <span id="summary-badge" class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800 text-brand-400 border border-slate-700">Even Split (2)</span>
+                        </div>
+
+                        <!-- Primary Highlight Metric -->
+                        <div id="even-highlight-box" class="bg-slate-800/70 border border-slate-700/70 rounded-2xl p-5">
+                            <div class="flex items-baseline justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-slate-300">Amount Per Person</p>
+                                    <p class="text-xs text-slate-400 mt-0.5">Includes bill + tip</p>
+                                </div>
+                                <div class="text-right">
+                                    <span id="per-person-display" class="font-display font-extrabold text-3xl sm:text-4xl text-emerald-400 tracking-tight">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Custom Breakdown List (Visible only in Custom Mode) -->
+                        <div id="custom-summary-list" class="hidden space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                            <!-- Individual totals injected here -->
+                        </div>
+
+                        <!-- Detailed Line Items -->
+                        <div class="space-y-3.5 pt-1 text-sm">
+                            <div class="flex justify-between items-center text-slate-300">
+                                <span>Subtotal</span>
+                                <span id="subtotal-display" class="font-semibold text-white">$0.00</span>
+                            </div>
+                            <div id="tax-summary-row" class="hidden flex justify-between items-center text-slate-300">
+                                <span>Shared Tax / Fees</span>
+                                <span id="tax-display" class="font-semibold text-white">$0.00</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-300">
+                                <div class="flex items-center gap-1.5">
+                                    <span>Tip Amount</span>
+                                    <span id="effective-tip-badge" class="text-xs px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">15%</span>
+                                </div>
+                                <span id="tip-amount-display" class="font-semibold text-brand-400">$0.00</span>
+                            </div>
+                            
+                            <div class="border-t border-slate-800 pt-3.5 flex justify-between items-baseline">
+                                <span class="text-base font-semibold text-white">Total with Tip</span>
+                                <span id="total-with-tip-display" class="font-display font-bold text-2xl text-white">$0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Rounding Option Toggle -->
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                            <label for="round-up-toggle" class="text-xs text-slate-400 cursor-pointer select-none flex items-center gap-2">
+                                <span>Round up per person to nearest whole</span>
+                            </label>
+                            <input type="checkbox" id="round-up-toggle" class="w-4 h-4 rounded accent-brand-500 cursor-pointer">
+                        </div>
+
+                        <!-- Copy Summary Action Button -->
+                        <button 
+                            type="button" 
+                            id="copy-summary-btn" 
+                            class="w-full py-3.5 px-5 rounded-2xl bg-brand-600 hover:bg-brand-500 active:scale-[0.99] text-white font-semibold text-sm shadow-lg shadow-brand-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                            <span id="copy-btn-text">Copy Summary</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Toast Notification (Replaces alert) -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 translate-y-4 transition-all duration-300">
+        <div class="bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2.5 text-sm font-medium">
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+            <span id="toast-message">Summary copied to clipboard!</span>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full py-6 text-center text-xs text-slate-400 border-t border-slate-200/60 mt-10">
+        <p>SplitSmart &bull; Fast, accurate group expense &amp; tip splitting</p>
+    </footer>
+
+    <!-- Application Logic -->
+    <script>
+        /**
+         * SplitSmart Application State & Controller
+         * Manages both Even Split and Custom/Itemized Split modes with real-time calculation.
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize Lucide Icons
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+
+            // --- Application State ---
+            const state = {
+                mode: 'even', // 'even' | 'custom'
+                currency: '$',
+                billAmount: 0,
+                tipType: 'percent', // 'percent' | 'flat'
+                tipValue: 15,
+                isCustomTip: false,
+                peopleCount: 2,
+                roundUp: false,
+                sharedTax: 0,
+                customPeople: [
+                    { id: 1, name: 'Person 1', amount: '' },
+                    { id: 2, name: 'Person 2', amount: '' }
+                ],
+                nextPersonId: 3
+            };
+
+            // --- DOM Elements ---
+            const els = {
+                currencySelect: document.getElementById('currency-select'),
+                currencySymbols: document.querySelectorAll('.currency-symbol'),
+                resetBtn: document.getElementById('reset-btn'),
+                
+                // Mode Switchers
+                modeEvenBtn: document.getElementById('mode-even-btn'),
+                modeCustomBtn: document.getElementById('mode-custom-btn'),
+                evenBillSection: document.getElementById('even-bill-section'),
+                evenPeopleSection: document.getElementById('even-people-section'),
+                customSplitSection: document.getElementById('custom-split-section'),
+
+                // Even Inputs
+                billInput: document.getElementById('bill-input'),
+                billError: document.getElementById('bill-error'),
+                peopleInput: document.getElementById('people-input'),
+                decrementPeople: document.getElementById('decrement-people'),
+                incrementPeople: document.getElementById('increment-people'),
+
+                // Tip Controls
+                tipPresetBtns: document.querySelectorAll('.tip-preset-btn'),
+                customTipInput: document.getElementById('custom-tip-input'),
+                tipTypePercent: document.getElementById('tip-type-percent'),
+                tipTypeFlat: document.getElementById('tip-type-flat'),
+
+                // Custom Split Controls
+                addPersonBtn: document.getElementById('add-person-btn'),
+                customPeopleList: document.getElementById('custom-people-list'),
+                sharedTaxInput: document.getElementById('shared-tax-input'),
+
+                // Summary Outputs
+                summaryBadge: document.getElementById('summary-badge'),
+                evenHighlightBox: document.getElementById('even-highlight-box'),
+                perPersonDisplay: document.getElementById('per-person-display'),
+                customSummaryList: document.getElementById('custom-summary-list'),
+                subtotalDisplay: document.getElementById('subtotal-display'),
+                taxSummaryRow: document.getElementById('tax-summary-row'),
+                taxDisplay: document.getElementById('tax-display'),
+                effectiveTipBadge: document.getElementById('effective-tip-badge'),
+                tipAmountDisplay: document.getElementById('tip-amount-display'),
+                totalWithTipDisplay: document.getElementById('total-with-tip-display'),
+                roundUpToggle: document.getElementById('round-up-toggle'),
+                copySummaryBtn: document.getElementById('copy-summary-btn'),
+                copyBtnText: document.getElementById('copy-btn-text'),
+
+                // Toast
+                toast: document.getElementById('toast'),
+                toastMessage: document.getElementById('toast-message')
+            };
+
+            // --- Formatting Helper ---
+            function formatMoney(value) {
+                const safeVal = isNaN(value) || !isFinite(value) ? 0 : value;
+                return `${state.currency}${safeVal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}`;
+            }
+
+            // --- Toast Notification Helper ---
+            let toastTimeout;
+            function showToast(message) {
+                els.toastMessage.textContent = message;
+                els.toast.classList.remove('opacity-0', 'translate-y-4');
+                els.toast.classList.add('opacity-100', 'translate-y-0');
+
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    els.toast.classList.add('opacity-0', 'translate-y-4');
+                    els.toast.classList.remove('opacity-100', 'translate-y-0');
+                }, 2600);
+            }
+
+            // --- Mode Switching ---
+            function setMode(newMode) {
+                state.mode = newMode;
+
+                if (newMode === 'even') {
+                    els.modeEvenBtn.className = 'flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-white text-brand-600 shadow-sm flex items-center justify-center gap-2';
+                    els.modeCustomBtn.className = 'flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2';
+                    
+                    els.evenBillSection.classList.remove('hidden');
+                    els.evenPeopleSection.classList.remove('hidden');
+                    els.customSplitSection.classList.add('hidden');
+                    
+                    els.evenHighlightBox.classList.remove('hidden');
+                    els.customSummaryList.classList.add('hidden');
+                    els.taxSummaryRow.classList.add('hidden');
+                } else {
+                    els.modeCustomBtn.className = 'flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-white text-brand-600 shadow-sm flex items-center justify-center gap-2';
+                    els.modeEvenBtn.className = 'flex-1 sm:flex-initial px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2';
+                    
+                    els.evenBillSection.classList.add('hidden');
+                    els.evenPeopleSection.classList.add('hidden');
+                    els.customSplitSection.classList.remove('hidden');
+                    
+                    els.evenHighlightBox.classList.add('hidden');
+                    els.customSummaryList.classList.remove('hidden');
+                    els.taxSummaryRow.classList.remove('hidden');
+
+                    renderCustomPeopleInputs();
+                }
+                calculateAndRender();
+            }
+
+            // --- Tip Preset Styling ---
+            function updateTipButtonsUI() {
+                els.tipPresetBtns.forEach(btn => {
+                    const btnTip = parseFloat(btn.dataset.tip);
+                    const isSelected = !state.isCustomTip && state.tipType === 'percent' && btnTip === state.tipValue;
+                    
+                    if (isSelected) {
+                        btn.className = 'tip-preset-btn py-2.5 px-3 rounded-xl font-semibold text-sm border border-brand-600 bg-brand-600 text-white shadow-sm shadow-brand-500/20 transition';
+                    } else {
+                        btn.className = 'tip-preset-btn py-2.5 px-3 rounded-xl font-semibold text-sm border border-slate-200 bg-white text-slate-700 hover:border-brand-500 hover:text-brand-600 transition';
+                    }
+                });
+
+                if (state.isCustomTip) {
+                    els.customTipInput.classList.add('border-brand-500', 'bg-white', 'ring-2', 'ring-brand-500/20');
+                    els.customTipInput.classList.remove('border-slate-200', 'bg-slate-50');
+                } else {
+                    els.customTipInput.classList.remove('border-brand-500', 'bg-white', 'ring-2', 'ring-brand-500/20');
+                    els.customTipInput.classList.add('border-slate-200', 'bg-slate-50');
+                }
+            }
+
+            // --- Custom People List Rendering ---
+            function renderCustomPeopleInputs() {
+                els.customPeopleList.innerHTML = '';
+
+                state.customPeople.forEach((person, index) => {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center gap-2.5 bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80 transition focus-within:border-brand-400 focus-within:bg-white';
+                    
+                    row.innerHTML = `
+                        <div class="w-8 h-8 rounded-xl bg-brand-100 text-brand-700 font-display font-bold text-xs flex items-center justify-center shrink-0">
+                            ${index + 1}
+                        </div>
+                        <input 
+                            type="text" 
+                            value="${escapeHtml(person.name)}" 
+                            data-id="${person.id}"
+                            placeholder="Name"
+                            aria-label="Person name"
+                            class="person-name-input w-1/2 sm:w-full bg-transparent text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none px-1"
+                        >
+                        <div class="relative w-32 sm:w-36 shrink-0">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">${state.currency}</span>
+                            <input 
+                                type="number" 
+                                inputmode="decimal"
+                                min="0" 
+                                step="0.01" 
+                                value="${person.amount}" 
+                                data-id="${person.id}"
+                                placeholder="0.00"
+                                aria-label="Person amount"
+                                class="person-amount-input w-full pl-7 pr-2.5 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 text-right focus:outline-none focus:border-brand-500"
+                            >
+                        </div>
+                        <button 
+                            type="button" 
+                            data-id="${person.id}"
+                            aria-label="Remove person"
+                            ${state.customPeople.length <= 1 ? 'disabled' : ''}
+                            class="remove-person-btn p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition disabled:opacity-30 disabled:pointer-events-none"
+                        >
+                            <i data-lucide="trash-2" class="w-4 h-4 pointer-events-none"></i>
+                        </button>
+                    `;
+                    els.customPeopleList.appendChild(row);
+                });
+
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+            }
+
+            function escapeHtml(str) {
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
+            // --- Core Calculation Engine ---
+            function calculateAndRender() {
+                let subtotal = 0;
+                let tax = 0;
+                let tipAmount = 0;
+                let totalWithTip = 0;
+
+                if (state.mode === 'even') {
+                    subtotal = Math.max(0, parseFloat(state.billAmount) || 0);
+                    const people = Math.max(1, parseInt(state.peopleCount, 10) || 1);
+                    
+                    // Calculate Tip
+                    if (state.tipType === 'percent') {
+                        tipAmount = subtotal * (state.tipValue / 100);
+                        els.effectiveTipBadge.textContent = `${state.tipValue}%`;
+                    } else {
+                        tipAmount = Math.max(0, state.tipValue);
+                        const pct = subtotal > 0 ? ((tipAmount / subtotal) * 100).toFixed(1) : 0;
+                        els.effectiveTipBadge.textContent = `${pct}%`;
+                    }
+
+                    totalWithTip = subtotal + tipAmount;
+                    let perPerson = totalWithTip / people;
+
+                    if (state.roundUp && perPerson > 0) {
+                        perPerson = Math.ceil(perPerson);
+                        totalWithTip = perPerson * people;
+                    }
+
+                    // Update UI
+                    els.summaryBadge.textContent = `Even Split (${people} ${people === 1 ? 'person' : 'people'})`;
+                    els.subtotalDisplay.textContent = formatMoney(subtotal);
+                    els.tipAmountDisplay.textContent = formatMoney(tipAmount);
+                    els.totalWithTipDisplay.textContent = formatMoney(totalWithTip);
+                    els.perPersonDisplay.textContent = formatMoney(perPerson);
+                    els.decrementPeople.disabled = people <= 1;
+
+                } else {
+                    // Custom / Itemized Mode
+                    const peopleCount = state.customPeople.length;
+                    tax = Math.max(0, parseFloat(state.sharedTax) || 0);
+                    
+                    // Sum individual subtotals
+                    subtotal = state.customPeople.reduce((sum, p) => {
+                        return sum + Math.max(0, parseFloat(p.amount) || 0);
+                    }, 0);
+
+                    const preTipTotal = subtotal + tax;
+
+                    if (state.tipType === 'percent') {
+                        // Tip applied on food/item subtotal
+                        tipAmount = subtotal * (state.tipValue / 100);
+                        els.effectiveTipBadge.textContent = `${state.tipValue}%`;
+                    } else {
+                        tipAmount = Math.max(0, state.tipValue);
+                        const pct = subtotal > 0 ? ((tipAmount / subtotal) * 100).toFixed(1) : 0;
+                        els.effectiveTipBadge.textContent = `${pct}%`;
+                    }
+
+                    totalWithTip = preTipTotal + tipAmount;
+
+                    // Update Summary Totals
+                    els.summaryBadge.textContent = `Custom Split (${peopleCount} ${peopleCount === 1 ? 'person' : 'people'})`;
+                    els.subtotalDisplay.textContent = formatMoney(subtotal);
+                    els.taxDisplay.textContent = formatMoney(tax);
+                    els.tipAmountDisplay.textContent = formatMoney(tipAmount);
+                    els.totalWithTipDisplay.textContent = formatMoney(totalWithTip);
+
+                    // Render Individual Breakdown Rows
+                    els.customSummaryList.innerHTML = '';
+                    let roundedGrandTotal = 0;
+
+                    state.customPeople.forEach((person, idx) => {
+                        const pBase = Math.max(0, parseFloat(person.amount) || 0);
+                        // Distribute tax and tip proportionally based on item share (or evenly if subtotal is 0)
+                        const shareRatio = subtotal > 0 ? (pBase / subtotal) : (1 / peopleCount);
+                        const pTax = tax * shareRatio;
+                        const pTip = tipAmount * shareRatio;
+                        let pTotal = pBase + pTax + pTip;
+
+                        if (state.roundUp && pTotal > 0) {
+                            pTotal = Math.ceil(pTotal);
+                        }
+                        roundedGrandTotal += pTotal;
+
+                        const displayName = person.name.trim() || `Person ${idx + 1}`;
+                        const itemEl = document.createElement('div');
+                        itemEl.className = 'flex items-center justify-between bg-slate-800/70 border border-slate-700/60 px-4 py-3 rounded-xl';
+                        itemEl.innerHTML = `
+                            <div class="truncate pr-3">
+                                <p class="text-sm font-semibold text-white truncate">${escapeHtml(displayName)}</p>
+                                <p class="text-[11px] text-slate-400">Item: ${formatMoney(pBase)} &bull; Tip: ${formatMoney(pTip)}</p>
+                            </div>
+                            <span class="font-display font-bold text-lg text-emerald-400 shrink-0">${formatMoney(pTotal)}</span>
+                        `;
+                        els.customSummaryList.appendChild(itemEl);
+                    });
+
+                    if (state.roundUp && subtotal > 0) {
+                        els.totalWithTipDisplay.textContent = formatMoney(roundedGrandTotal);
+                    }
+                }
+            }
+
+            // --- Generate Text Summary for Clipboard ---
+            function generateSummaryText() {
+                const lines = [
+                    `🧾 SplitSmart Bill Summary`,
+                    `------------------------`
+                ];
+
+                if (state.mode === 'even') {
+                    const subtotal = Math.max(0, parseFloat(state.billAmount) || 0);
+                    const people = Math.max(1, parseInt(state.peopleCount, 10) || 1);
+                    const tipAmount = state.tipType === 'percent' ? subtotal * (state.tipValue / 100) : Math.max(0, state.tipValue);
+                    let total = subtotal + tipAmount;
+                    let perPerson = total / people;
+                    if (state.roundUp && perPerson > 0) {
+                        perPerson = Math.ceil(perPerson);
+                        total = perPerson * people;
+                    }
+
+                    lines.push(`Subtotal: ${formatMoney(subtotal)}`);
+                    lines.push(`Tip (${els.effectiveTipBadge.textContent}): ${formatMoney(tipAmount)}`);
+                    lines.push(`Total: ${formatMoney(total)}`);
+                    lines.push(`Split (${people} ways): ${formatMoney(perPerson)} / person`);
+                } else {
+                    const peopleCount = state.customPeople.length;
+                    const tax = Math.max(0, parseFloat(state.sharedTax) || 0);
+                    const subtotal = state.customPeople.reduce((sum, p) => sum + Math.max(0, parseFloat(p.amount) || 0), 0);
+                    const tipAmount = state.tipType === 'percent' ? subtotal * (state.tipValue / 100) : Math.max(0, state.tipValue);
+                    
+                    lines.push(`Subtotal: ${formatMoney(subtotal)}`);
+                    if (tax > 0) lines.push(`Shared Tax/Fees: ${formatMoney(tax)}`);
+                    lines.push(`Tip (${els.effectiveTipBadge.textContent}): ${formatMoney(tipAmount)}`);
+                    lines.push(`Total: ${els.totalWithTipDisplay.textContent}`);
+                    lines.push(`------------------------`);
+                    lines.push(`Individual Breakdown:`);
+
+                    state.customPeople.forEach((person, idx) => {
+                        const pBase = Math.max(0, parseFloat(person.amount) || 0);
+                        const ratio = subtotal > 0 ? (pBase / subtotal) : (1 / peopleCount);
+                        let pTotal = pBase + (tax * ratio) + (tipAmount * ratio);
+                        if (state.roundUp && pTotal > 0) pTotal = Math.ceil(pTotal);
+                        const name = person.name.trim() || `Person ${idx + 1}`;
+                        lines.push(`• ${name}: ${formatMoney(pTotal)}`);
+                    });
+                }
+
+                return lines.join('\n');
+            }
+
+            // --- Event Listeners ---
+
+            // Currency Change
+            els.currencySelect.addEventListener('change', (e) => {
+                state.currency = e.target.value;
+                els.currencySymbols.forEach(el => el.textContent = state.currency);
+                if (state.mode === 'custom') renderCustomPeopleInputs();
+                calculateAndRender();
+            });
+
+            // Mode Toggles
+            els.modeEvenBtn.addEventListener('click', () => setMode('even'));
+            els.modeCustomBtn.addEventListener('click', () => setMode('custom'));
+
+            // Even Bill Input
+            els.billInput.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                if (e.target.value !== '' && val < 0) {
+                    els.billError.classList.remove('hidden');
+                    state.billAmount = 0;
+                } else {
+                    els.billError.classList.add('hidden');
+                    state.billAmount = isNaN(val) ? 0 : val;
+                }
+                calculateAndRender();
+            });
+
+            // Tip Preset Buttons
+            els.tipPresetBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Switch back to percent mode when clicking a % preset
+                    setTipType('percent');
+                    state.isCustomTip = false;
+                    state.tipValue = parseFloat(btn.dataset.tip);
+                    els.customTipInput.value = '';
+                    updateTipButtonsUI();
+                    calculateAndRender();
+                });
+            });
+
+            // Custom Tip Input
+            els.customTipInput.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                state.isCustomTip = true;
+                state.tipValue = isNaN(val) || val < 0 ? 0 : val;
+                updateTipButtonsUI();
+                calculateAndRender();
+            });
+
+            // Tip Type Toggle (% vs Flat $)
+            function setTipType(type) {
+                state.tipType = type;
+                if (type === 'percent') {
+                    els.tipTypePercent.className = 'px-2 py-1 rounded-md bg-white text-slate-800 shadow-sm transition';
+                    els.tipTypeFlat.className = 'px-2 py-1 rounded-md text-slate-500 hover:text-slate-800 transition';
+                } else {
+                    els.tipTypeFlat.className = 'px-2 py-1 rounded-md bg-white text-slate-800 shadow-sm transition';
+                    els.tipTypePercent.className = 'px-2 py-1 rounded-md text-slate-500 hover:text-slate-800 transition';
+                    state.isCustomTip = true;
+                    state.tipValue = parseFloat(els.customTipInput.value) || 0;
+                    els.customTipInput.focus();
+                }
+                updateTipButtonsUI();
+                calculateAndRender();
+            }
+
+            els.tipTypePercent.addEventListener('click', () => setTipType('percent'));
+            els.tipTypeFlat.addEventListener('click', () => setTipType('flat'));
+
+            // People Counter Controls (Even Mode)
+            els.decrementPeople.addEventListener('click', () => {
+                if (state.peopleCount > 1) {
+                    state.peopleCount--;
+                    els.peopleInput.value = state.peopleCount;
+                    calculateAndRender();
+                }
+            });
+
+            els.incrementPeople.addEventListener('click', () => {
+                if (state.peopleCount < 100) {
+                    state.peopleCount++;
+                    els.peopleInput.value = state.peopleCount;
+                    calculateAndRender();
+                }
+            });
+
+            els.peopleInput.addEventListener('input', (e) => {
+                let val = parseInt(e.target.value, 10);
+                if (isNaN(val) || val < 1) val = 1;
+                if (val > 100) val = 100;
+                state.peopleCount = val;
+                calculateAndRender();
+            });
+
+            els.peopleInput.addEventListener('blur', (e) => {
+                e.target.value = state.peopleCount;
+            });
+
+            // Custom Split Mode Controls
+            els.addPersonBtn.addEventListener('click', () => {
+                state.customPeople.push({
+                    id: state.nextPersonId++,
+                    name: `Person ${state.customPeople.length + 1}`,
+                    amount: ''
+                });
+                renderCustomPeopleInputs();
+                calculateAndRender();
+            });
+
+            els.sharedTaxInput.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                state.sharedTax = isNaN(val) || val < 0 ? 0 : val;
+                calculateAndRender();
+            });
+
+            // Delegated events for dynamic Custom People rows
+            els.customPeopleList.addEventListener('input', (e) => {
+                const id = parseInt(e.target.dataset.id, 10);
+                const person = state.customPeople.find(p => p.id === id);
+                if (!person) return;
+
+                if (e.target.classList.contains('person-name-input')) {
+                    person.name = e.target.value;
+                    calculateAndRender();
+                } else if (e.target.classList.contains('person-amount-input')) {
+                    person.amount = e.target.value;
+                    calculateAndRender();
+                }
+            });
+
+            els.customPeopleList.addEventListener('click', (e) => {
+                const removeBtn = e.target.closest('.remove-person-btn');
+                if (removeBtn && state.customPeople.length > 1) {
+                    const id = parseInt(removeBtn.dataset.id, 10);
+                    state.customPeople = state.customPeople.filter(p => p.id !== id);
+                    renderCustomPeopleInputs();
+                    calculateAndRender();
+                }
+            });
+
+            // Round Up Toggle
+            els.roundUpToggle.addEventListener('change', (e) => {
+                state.roundUp = e.target.checked;
+                calculateAndRender();
+            });
+
+            // Copy Summary to Clipboard (using execCommand fallback for reliable iframe compatibility)
+            els.copySummaryBtn.addEventListener('click', () => {
+                const summaryText = generateSummaryText();
+                
+                const textArea = document.createElement('textarea');
+                textArea.value = summaryText;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-9999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    showToast('Bill summary copied to clipboard!');
+                    
+                    // Temporary button feedback
+                    const originalText = els.copyBtnText.textContent;
+                    els.copyBtnText.textContent = 'Copied!';
+                    els.copySummaryBtn.classList.replace('bg-brand-600', 'bg-emerald-600');
+                    setTimeout(() => {
+                        els.copyBtnText.textContent = originalText;
+                        els.copySummaryBtn.classList.replace('bg-emerald-600', 'bg-brand-600');
+                    }, 1800);
+                } catch (err) {
+                    showToast('Unable to copy summary.');
+                } finally {
+                    document.body.removeChild(textArea);
+                }
+            });
+
+            // Reset All Button
+            els.resetBtn.addEventListener('click', () => {
+                state.billAmount = 0;
+                state.tipType = 'percent';
+                state.tipValue = 15;
+                state.isCustomTip = false;
+                state.peopleCount = 2;
+                state.roundUp = false;
+                state.sharedTax = 0;
+                state.customPeople = [
+                    { id: 1, name: 'Person 1', amount: '' },
+                    { id: 2, name: 'Person 2', amount: '' }
+                ];
+                state.nextPersonId = 3;
+
+                els.billInput.value = '';
+                els.customTipInput.value = '';
+                els.peopleInput.value = '2';
+                els.sharedTaxInput.value = '';
+                els.roundUpToggle.checked = false;
+                els.billError.classList.add('hidden');
+
+                setTipType('percent');
+                if (state.mode === 'custom') renderCustomPeopleInputs();
+                calculateAndRender();
+                showToast('Calculator reset');
+            });
+
+            // Initial Render
+            calculateAndRender();
+        });
+    </script>
+</body>
+</html>
